@@ -59,13 +59,15 @@ SEMFS_DEVICE=cpu uv run semfs ~/Documents
 ## Interface and shortcuts
 
 The left panel lists directory entries or search results. The right panel shows
-metadata, a text preview, and the matching passage or duplicate group.
+metadata, a text preview, and the matching passage or duplicate group. Navigation
+shortcuts stay visible at the bottom. The theme uses a black background with blue
+selection and focus highlights.
 
 | Key | Action |
 | --- | --- |
 | Up / Down or j / k | Select an entry |
-| Enter | Enter a directory or open a file |
-| Backspace | Parent directory, stopping at the selected root |
+| Right / Enter | Enter a directory or open a file |
+| Left / Backspace / p | Parent directory, stopping at the selected root |
 | n / N | Create a file / directory |
 | r | Rename |
 | c / m | Copy / move |

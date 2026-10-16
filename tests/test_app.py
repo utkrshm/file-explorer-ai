@@ -144,3 +144,46 @@ async def test_background_scan_allows_navigation_and_cancel(tmp_path, monkeypatc
         await app.workers.wait_for_complete()
         await pilot.pause()
         assert not app.busy
+
+
+async def test_arrow_navigation_and_black_theme(tmp_path, monkeypatch):
+    from unittest.mock import Mock
+
+    from textual.widgets import Footer, Header, Static
+
+    folder = tmp_path / "folder"
+    folder.mkdir()
+    file = folder / "note.txt"
+    file.write_text("preview")
+    app = SemFS(tmp_path)
+    opened = Mock()
+    monkeypatch.setattr(app.fm, "open_default", opened)
+    async with app.run_test(size=(90, 30)) as pilot:
+        await pilot.press("right")
+        assert app.fm.current == folder
+        await pilot.press("right")
+        opened.assert_called_once_with(file)
+
+        await pilot.press("/", "p", "left", "right")
+        assert app.fm.current == folder
+        assert app.query_one("#search", Input).value == "p"
+        opened.assert_called_once()
+        await pilot.press("escape", "left")
+        assert app.fm.current == tmp_path
+        await pilot.press("left", "p")
+        assert app.fm.current == tmp_path
+        await pilot.press("right", "p")
+        assert app.fm.current == tmp_path
+
+        navigation = app.query_one("#navigation", Static)
+        footer = app.query_one(Footer)
+        assert navigation.region.y >= app.query_one(DataTable).region.bottom
+        assert navigation.region.bottom <= footer.region.y
+        assert "Parent" in str(navigation.content)
+        assert "Open" in str(navigation.content)
+        assert app.screen.styles.background.hex == "#000000"
+        assert app.query_one(DataTable).styles.background.hex == "#000000"
+        assert app.query_one(Header).styles.background.hex == "#000000"
+        assert footer.styles.background.hex == "#000000"
+        cursor = app.query_one(DataTable).get_component_styles("datatable--cursor")
+        assert cursor.background.hex == "#1D4ED8"

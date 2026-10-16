@@ -12,6 +12,7 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
+from textual.theme import Theme
 from textual.widgets import Button, DataTable, Footer, Header, Input, ProgressBar, Static
 from textual.worker import get_current_worker
 
@@ -60,34 +61,49 @@ class Prompt(ModalScreen[str | None]):
 
 
 class FileTable(DataTable):
-    BINDINGS = [Binding("j", "cursor_down", show=False), Binding("k", "cursor_up", show=False)]
+    BINDINGS = [
+        Binding("j", "cursor_down", show=False),
+        Binding("k", "cursor_up", show=False),
+        Binding("left", "app.parent", show=False),
+        Binding("right", "app.open_selection", show=False),
+    ]
 
 
 class SemFS(App):
     TITLE = "SemFS"
     SUB_TITLE = "Your files, a thought away"
     CSS = """
-    Screen { background: #0d1520; }
-    Header { background: #172838; color: #63dfc5; }
-    #location { height: 2; padding: 0 2; color: #a7bbcf; }
-    #search { margin: 0 1 1 1; border: round #34516a; }
+    Screen { background: #000000; color: #dedede; }
+    Header { background: #000000; color: #dedede; }
+    #location { height: 2; padding: 0 2; color: #aaaaaa; }
+    #search { background: #000000; margin: 0 1 1 1; border: round #333333; }
+    #search:focus { border: round #4c8dff; }
     #panels { height: 1fr; }
-    #files { width: 3fr; border: round #34516a; margin: 0 0 0 1; }
-    #detail-scroll { width: 2fr; border: round #34516a; margin: 0 1; padding: 0 1; }
+    #files { width: 3fr; background: #000000; border: round #333333; margin: 0 0 0 1; }
+    #files:focus { border: round #4c8dff; background-tint: transparent; }
+    #files > .datatable--header { background: #000000; color: #aaaaaa; }
+    #files:focus > .datatable--header { background-tint: transparent; }
+    #detail-scroll { width: 2fr; background: #000000; border: round #333333;
+                     margin: 0 1; padding: 0 1; }
+    #detail-scroll:focus { border: round #4c8dff; }
     #details { height: auto; }
-    #status { height: 2; padding: 0 2; color: #63dfc5; }
-    #activity { height: 1; padding: 0 2; color: #a7bbcf; }
+    #status { height: 2; padding: 0 2; color: #dedede; }
+    #activity { height: 1; padding: 0 2; color: #aaaaaa; }
     #progress { height: 1; margin: 0 2; }
-    Footer { background: #172838; }
+    #navigation { height: auto; min-height: 1; padding: 0 2; background: #000000; }
+    Footer { background: #000000; }
     Help { align: center middle; background: #000000 60%; }
     Prompt { align: center middle; background: #000000 60%; }
     #dialog { width: 64; max-width: 95%; height: auto; max-height: 90%; padding: 1 2;
-              border: round #63dfc5; background: #172838; }
+              border: round #4c8dff; background: #000000; }
     #dialog Static { height: auto; margin-bottom: 1; }
     .buttons { height: 3; align-horizontal: right; margin-top: 1; }
     .buttons Button { margin-left: 1; }
     """
     BINDINGS = [
+        Binding("left", "parent", "Parent", show=False),
+        Binding("right", "open_selection", "Open", show=False),
+        Binding("p", "parent", "Parent", show=False),
         Binding("backspace", "parent", "Parent", show=False),
         Binding("n", "new_file", "New", show=False),
         Binding("N", "new_directory", "Folder", show=False),
@@ -111,6 +127,36 @@ class SemFS(App):
 
     def __init__(self, root: Path):
         super().__init__()
+        self.register_theme(
+            Theme(
+                name="semfs-black",
+                primary="#4c8dff",
+                secondary="#4c8dff",
+                accent="#4c8dff",
+                foreground="#dedede",
+                background="#000000",
+                surface="#000000",
+                panel="#000000",
+                boost="#000000",
+                variables={
+                    "border": "#333333",
+                    "border-blurred": "#333333",
+                    "footer-background": "#000000",
+                    "footer-item-background": "#000000",
+                    "footer-key-background": "#000000",
+                    "footer-key-foreground": "#4c8dff",
+                    "footer-description-background": "#000000",
+                    "footer-description-foreground": "#dedede",
+                    "block-cursor-background": "#1d4ed8",
+                    "block-cursor-foreground": "#ffffff",
+                    "block-cursor-blurred-background": "#202020",
+                    "block-cursor-blurred-foreground": "#dedede",
+                    "block-hover-background": "#1d4ed8 25%",
+                    "input-selection-background": "#1d4ed8 50%",
+                },
+            )
+        )
+        self.theme = "semfs-black"
         self.fm = FileManager(root)
         self.paths: list[Path] = []
         self.sort_by = "name"
@@ -134,7 +180,7 @@ class SemFS(App):
         yield Static(id="location", markup=False)
         yield Input(placeholder="/ filename search  |  s AI search  |  Escape browse", id="search")
         with Horizontal(id="panels"):
-            yield FileTable(id="files", cursor_type="row", zebra_stripes=True)
+            yield FileTable(id="files", cursor_type="row", zebra_stripes=False)
             with VerticalScroll(id="detail-scroll", can_focus=True):
                 yield Static("Select a file to preview it.", id="details", markup=False)
         yield Static("Ready. Press ? for all shortcuts.", id="status", markup=False)
@@ -144,7 +190,12 @@ class SemFS(App):
             markup=False,
         )
         yield ProgressBar(total=100, show_eta=False, id="progress")
-        yield Footer()
+        yield Static(
+            "[#4c8dff]↑/↓ j/k[/] Select   [#4c8dff]←[/] Parent   "
+            "[#4c8dff]→ Enter[/] Open   [#4c8dff]Tab[/] Panels   [#4c8dff]Esc[/] Browse",
+            id="navigation",
+        )
+        yield Footer(show_command_palette=False)
 
     def on_mount(self) -> None:
         self.query_one("#files").border_title = "FILES"
@@ -234,6 +285,9 @@ class SemFS(App):
 
     @on(DataTable.RowSelected, "#files")
     def enter(self) -> None:
+        self.action_open_selection()
+
+    def action_open_selection(self) -> None:
         path = self.selected()
         if path:
             if path.is_dir():
@@ -569,8 +623,8 @@ class Help(ModalScreen):
         with Vertical(id="dialog"):
             yield Static(
                 "SemFS shortcuts\n\n"
-                "Up/Down or j/k   Navigate       Enter   Open directory/file\n"
-                "Backspace       Parent         Tab     Switch panels\n"
+                "Up/Down or j/k   Select         Right/Enter   Open\n"
+                "Left/Backspace/p Parent         Tab     Switch panels\n"
                 "n   New file    N   New folder  r       Rename\n"
                 "c   Copy        m   Move        Delete  Confirm deletion\n"
                 "o   Default app e   $VISUAL/$EDITOR (default: nano)\n"
