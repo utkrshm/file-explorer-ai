@@ -1,0 +1,50 @@
+[project]
+name = "semfs"
+version = "0.1.0"
+description = "A small terminal file manager with local semantic search"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "textual>=8.2.8,<9",
+    "rich>=14,<15",
+    "numpy>=2,<3",
+    "sentence-transformers[image]>=6.1.0,<7",
+    "transformers>=5.20.1,<6",
+    "torch>=2.6",
+    "torchvision>=0.24,<1",
+    "pymupdf>=1.26,<2",
+    "pillow>=11,<13",
+]
+
+[project.scripts]
+semfs = "semfs.__main__:main"
+semfs-demo = "semfs.demo:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = ["pytest>=8", "pytest-asyncio>=1", "ruff>=0.14"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = ["integration: opt-in inference with the real EmbeddingGemma 2 model"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+# Use a smaller CPU build by default; README documents optional CUDA installation.
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+torchvision = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
