@@ -8,6 +8,9 @@ import numpy as np
 
 from semfs.file_manager import FileManager
 
+# AI search hides results whose cosine similarity to the query is below this score.
+MIN_SCORE = 0.650
+
 
 @dataclass
 class SearchResult:
@@ -55,13 +58,17 @@ def rank_chunks(
     return sorted(best.values(), key=lambda item: (-item.score, str(item.path)))[:limit]
 
 
-def semantic_search(database, embedder, query: str, limit: int = 30) -> list[SearchResult]:
+def semantic_search(
+    database, embedder, query: str, limit: int = 30, min_score: float = MIN_SCORE
+) -> list[SearchResult]:
     if not query.strip():
         return []
     chunks = database.chunks(embedder.model_id)
     if not chunks:
         return []
-    return rank_chunks(chunks, embedder.query(query), limit)
+    # Results are sorted by score, so filtering after the limit keeps the best matches.
+    results = rank_chunks(chunks, embedder.query(query), limit)
+    return [result for result in results if result.score >= min_score]
 
 
 def similar_files(database, embedder, path: Path, limit: int = 30) -> list[SearchResult]:

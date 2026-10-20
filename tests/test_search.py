@@ -4,7 +4,13 @@ import pytest
 from semfs.database import CachedChunk
 from semfs.file_manager import FileManager
 from semfs.indexer import index_files
-from semfs.search import filename_search, rank_chunks, semantic_search, similar_files
+from semfs.search import (
+    MIN_SCORE,
+    filename_search,
+    rank_chunks,
+    semantic_search,
+    similar_files,
+)
 
 
 class FakeEmbedder:
@@ -69,8 +75,13 @@ def test_semantic_retrieval_and_similar_files(indexed):
     (manager.root / "garden.txt").write_text("tomato garden soil")
     embedder = FakeEmbedder()
     index_files(manager, database, embedder)
-    results = semantic_search(database, embedder, "deadlock")
-    assert results[0].path.name == "os.txt"
+    results = semantic_search(database, embedder, "deadlock mutex semaphore")
+    # garden.txt scores 0 against this query, below the AI search threshold.
+    assert [result.path.name for result in results] == ["os.txt", "locks.txt"]
+    assert all(result.score >= MIN_SCORE for result in results)
+    # "deadlock" alone scores about 0.45 against os.txt.
+    assert semantic_search(database, embedder, "deadlock") == []
+    assert semantic_search(database, embedder, "deadlock", min_score=0.4)[0].path.name == "os.txt"
     related = similar_files(database, embedder, manager.root / "os.txt")
     assert related[0].path.name == "locks.txt"
     assert all(result.path.name != "os.txt" for result in related)

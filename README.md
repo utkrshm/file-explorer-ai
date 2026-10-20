@@ -144,9 +144,11 @@ bfloat16, never float16, following the
 
 NumPy computes cosine similarity against cached chunks. Each file appears once
 with its best chunk and passage. Scores range from -1 to 1 and are similarities,
-not confidence percentages. Weakly related files can appear among the best
-available matches. Similar-file search compares the selected file's mean
-document vector against other files and excludes the source.
+not confidence percentages. AI search only shows results scoring 0.650 or
+higher (MIN_SCORE in search.py), so weakly related files are hidden and a query
+with no strong match shows no results. Similar-file search is not filtered. It
+compares the selected file's mean document vector against other files and
+excludes the source.
 
 SQLite stores relative paths, size, nanosecond timestamps, file type, model ID,
 passage locations, and float32 embeddings. Scans reuse unchanged files and

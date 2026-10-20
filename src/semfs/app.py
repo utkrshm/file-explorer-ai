@@ -21,7 +21,7 @@ from semfs.duplicates import find_duplicates
 from semfs.embeddings import Embedder
 from semfs.file_manager import FileManager, human_size
 from semfs.indexer import index_files
-from semfs.search import filename_search, semantic_search, similar_files
+from semfs.search import MIN_SCORE, filename_search, semantic_search, similar_files
 
 
 class Prompt(ModalScreen[str | None]):
@@ -529,7 +529,9 @@ class SemFS(App):
         self.status(
             "Enter/o opens a result. Escape returns to browsing."
             if results
-            else "No matches. AI search needs an up-to-date index: press i."
+            else f"No matches scoring {MIN_SCORE:.3f} or higher. Rephrase, or press i to index."
+            if mode == "semantic"
+            else "No matches."
         )
 
     def show_ranked(self, results: list) -> None:
