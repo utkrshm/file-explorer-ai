@@ -20,14 +20,31 @@ uv run semfs ~/Documents
 The folder argument defaults to the current directory. The alternative module
 entry point also works: **uv run python -m semfs ~/Documents**.
 
-Linux is the primary target. Install your distribution's **xdg-utils** package
-for default-application opening, and an editor such as nano, vim, or micro:
+Linux and Windows 11 are supported. On Linux, install your distribution's
+**xdg-utils** package for default-application opening, and an editor such as
+nano, vim, or micro:
 
 ~~~sh
 export EDITOR="nano"
 ~~~
 
-VISUAL takes precedence over EDITOR. No editor setting defaults to nano.
+VISUAL takes precedence over EDITOR. No editor setting defaults to nano on
+Linux and Notepad on Windows.
+
+### Windows
+
+Run SemFS in Windows Terminal. In PowerShell, from this project directory:
+
+~~~powershell
+uv sync --locked
+uv run semfs C:\Users\you\Documents
+~~~
+
+The **o** key opens files with their default Windows application. To use a
+different editor than Notepad, set EDITOR before launching, for example
+**$env:EDITOR = "code --wait"**. The index cache is stored in
+%LOCALAPPDATA%\semfs. Creating symlinks on Windows requires Developer Mode, so
+the symlink tests are skipped without it.
 
 Ordinary file management needs no model download. The first index or AI query
 that requires inference downloads the public model checkpoint from Hugging Face.
@@ -72,8 +89,8 @@ selection and focus highlights.
 | r | Rename |
 | c / m | Copy / move |
 | Delete | Permanently delete after confirmation |
-| o | Open with xdg-open |
-| e | Edit using VISUAL, EDITOR, or nano |
+| o | Open with the default application (xdg-open on Linux) |
+| e | Edit using VISUAL, EDITOR, or nano (Notepad on Windows) |
 | / | Filename search; type a name, extension, or glob and press Enter |
 | s | AI search; describe content and press Enter |
 | i | Incrementally index the selected root |
@@ -137,7 +154,7 @@ update modified ones. Deleted entries are removed on the next scan. Search
 excludes changed or missing files immediately, before reindexing.
 
 The database stays **outside the managed root**, normally under
-$XDG_CACHE_HOME/semfs or ~/.cache/semfs. When that is inside the selected root
+$XDG_CACHE_HOME/semfs or ~/.cache/semfs (%LOCALAPPDATA%\semfs on Windows). When that is inside the selected root
 (for example, when managing your home directory), it uses a per-user directory
 under the system temporary directory. That fallback survives app restarts but
 can be cleaned by the OS. Set SEMFS_CACHE_DIR to choose a cache directory

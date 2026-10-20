@@ -355,7 +355,7 @@ class SemFS(App):
         if path := self.selected():
             try:
                 self.fm.open_default(path)
-                self.status(f"Opening {path.name} with xdg-open")
+                self.status(f"Opening {path.name} with the default application")
             except (OSError, ValueError) as error:
                 self.notify(str(error), severity="error")
 

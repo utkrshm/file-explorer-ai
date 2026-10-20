@@ -4,6 +4,7 @@ import os
 import shlex
 import shutil
 import subprocess
+import sys
 from collections.abc import Callable, Iterator
 from pathlib import Path
 
@@ -131,8 +132,12 @@ class FileManager:
 
     def open_default(self, path: Path) -> None:
         path = self.safe(path)
+        if sys.platform == "win32":
+            os.startfile(path)
+            return
+        opener = "open" if sys.platform == "darwin" else "xdg-open"
         subprocess.Popen(
-            ["xdg-open", str(path)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            [opener, str(path)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
         )
 
     def editor_command(self, path: Path) -> list[str]:
@@ -144,7 +149,13 @@ class FileManager:
         if b"\0" in data:
             raise ValueError("Select a text file to edit")
         data.decode("utf-8")
-        command = shlex.split(os.environ.get("VISUAL") or os.environ.get("EDITOR") or "nano")
+        windows = sys.platform == "win32"
+        value = os.environ.get("VISUAL") or os.environ.get("EDITOR")
+        value = value or ("notepad" if windows else "nano")
+        command = shlex.split(value, posix=not windows)
+        if windows:
+            # Non-POSIX splitting keeps backslashes in paths but also keeps the quotes.
+            command = [part.strip('"') for part in command]
         if not command:
             raise ValueError("EDITOR is empty")
         return command + [str(path)]
