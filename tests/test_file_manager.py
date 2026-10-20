@@ -1,7 +1,9 @@
+import sys
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from conftest import symlink
 
 from semfs.file_manager import FileManager
 
@@ -76,9 +78,9 @@ def test_symlink_containment(fm, tmp_path):
     outside.mkdir()
     (outside / "secret.txt").write_text("secret")
     link = fm.root / "link"
-    link.symlink_to(outside, target_is_directory=True)
+    symlink(link, outside, target_is_directory=True)
     dangling = fm.root / "broken"
-    dangling.symlink_to(outside / "missing")
+    symlink(dangling, outside / "missing")
     for path in (link, link / "secret.txt", dangling):
         with pytest.raises(ValueError):
             fm.safe(path)
@@ -89,9 +91,11 @@ def test_symlink_containment(fm, tmp_path):
         fm.navigate(link)
 
 
-def test_nested_symlink_copy_blocked(fm):
+def test_nested_symlink_copy_blocked(fm, tmp_path):
     folder = fm.create("folder", directory=True)
-    (folder / "link").symlink_to("/etc/passwd")
+    outside = tmp_path.parent / f"{tmp_path.name}-target.txt"
+    outside.write_text("secret")
+    symlink(folder / "link", outside)
     with pytest.raises(ValueError):
         fm.transfer(folder, "copy")
     assert not (fm.root / "copy").exists()
@@ -108,9 +112,25 @@ def test_preview_sort_and_editor(fm, monkeypatch):
     monkeypatch.setenv("EDITOR", "vim -u NONE")
     monkeypatch.delenv("VISUAL", raising=False)
     assert fm.editor_command(small) == ["vim", "-u", "NONE", str(small)]
-    with patch("semfs.file_manager.subprocess.Popen") as popen:
-        fm.open_default(small)
-        assert popen.call_args.args[0] == ["xdg-open", str(small)]
+    if sys.platform == "win32":
+        with patch("semfs.file_manager.os.startfile") as startfile:
+            fm.open_default(small)
+            startfile.assert_called_once_with(small)
+    else:
+        opener = "open" if sys.platform == "darwin" else "xdg-open"
+        with patch("semfs.file_manager.subprocess.Popen") as popen:
+            fm.open_default(small)
+            assert popen.call_args.args[0] == [opener, str(small)]
+
+
+def test_windows_editor_default_and_paths(fm, monkeypatch):
+    file = fm.create("a.txt")
+    monkeypatch.setattr("semfs.file_manager.sys.platform", "win32")
+    monkeypatch.delenv("VISUAL", raising=False)
+    monkeypatch.delenv("EDITOR", raising=False)
+    assert fm.editor_command(file) == ["notepad", str(file)]
+    monkeypatch.setenv("EDITOR", r'"C:\Program Files\Editor\edit.exe" --wait')
+    assert fm.editor_command(file) == [r"C:\Program Files\Editor\edit.exe", "--wait", str(file)]
 
 
 def test_inaccessible_file_reports_error(fm):
