@@ -1,8 +1,10 @@
 """A root-specific SQLite cache. Each method uses its own short-lived connection."""
 
+import getpass
 import hashlib
 import os
 import sqlite3
+import sys
 import tempfile
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -16,14 +18,13 @@ from semfs.file_manager import FileManager
 def cache_path(root: Path) -> Path:
     root = root.resolve()
     digest = hashlib.sha256(str(root).encode()).hexdigest()[:24]
-    preferred = Path(
-        os.environ.get(
-            "SEMFS_CACHE_DIR",
-            str(Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "semfs"),
-        )
-    ).expanduser()
+    if sys.platform == "win32":
+        base = os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")
+    else:
+        base = os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")
+    preferred = Path(os.environ.get("SEMFS_CACHE_DIR", str(Path(base) / "semfs"))).expanduser()
     # Managing the home directory must not put its own index inside that directory.
-    candidates = [preferred, Path(tempfile.gettempdir()) / f"semfs-{os.getuid()}"]
+    candidates = [preferred, Path(tempfile.gettempdir()) / f"semfs-{getpass.getuser()}"]
     for directory in candidates:
         if not directory.resolve().is_relative_to(root):
             directory.mkdir(parents=True, exist_ok=True, mode=0o700)

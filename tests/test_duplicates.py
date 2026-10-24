@@ -1,6 +1,8 @@
 from pathlib import Path
 from unittest.mock import patch
 
+from conftest import symlink
+
 from semfs.duplicates import find_duplicates
 from semfs.file_manager import FileManager
 
@@ -28,7 +30,7 @@ def test_hard_links_and_symlinks(tmp_path):
     file = tmp_path / "a"
     file.write_text("same")
     (tmp_path / "hard").hardlink_to(file)
-    (tmp_path / "sym").symlink_to(file)
+    symlink(tmp_path / "sym", file)
     assert find_duplicates(FileManager(tmp_path)).groups == []
 
 

@@ -20,14 +20,31 @@ uv run semfs ~/Documents
 The folder argument defaults to the current directory. The alternative module
 entry point also works: **uv run python -m semfs ~/Documents**.
 
-Linux is the primary target. Install your distribution's **xdg-utils** package
-for default-application opening, and an editor such as nano, vim, or micro:
+Linux and Windows 11 are supported. On Linux, install your distribution's
+**xdg-utils** package for default-application opening, and an editor such as
+nano, vim, or micro:
 
 ~~~sh
 export EDITOR="nano"
 ~~~
 
-VISUAL takes precedence over EDITOR. No editor setting defaults to nano.
+VISUAL takes precedence over EDITOR. No editor setting defaults to nano on
+Linux and Notepad on Windows.
+
+### Windows
+
+Run SemFS in Windows Terminal. In PowerShell, from this project directory:
+
+~~~powershell
+uv sync --locked
+uv run semfs C:\Users\you\Documents
+~~~
+
+The **o** key opens files with their default Windows application. To use a
+different editor than Notepad, set EDITOR before launching, for example
+**$env:EDITOR = "code --wait"**. The index cache is stored in
+%LOCALAPPDATA%\semfs. Creating symlinks on Windows requires Developer Mode, so
+the symlink tests are skipped without it.
 
 Ordinary file management needs no model download. The first index or AI query
 that requires inference downloads the public model checkpoint from Hugging Face.
@@ -72,8 +89,8 @@ selection and focus highlights.
 | r | Rename |
 | c / m | Copy / move |
 | Delete | Permanently delete after confirmation |
-| o | Open with xdg-open |
-| e | Edit using VISUAL, EDITOR, or nano |
+| o | Open with the default application (xdg-open on Linux) |
+| e | Edit using VISUAL, EDITOR, or nano (Notepad on Windows) |
 | / | Filename search; type a name, extension, or glob and press Enter |
 | s | AI search; describe content and press Enter |
 | i | Incrementally index the selected root |
@@ -127,9 +144,11 @@ bfloat16, never float16, following the
 
 NumPy computes cosine similarity against cached chunks. Each file appears once
 with its best chunk and passage. Scores range from -1 to 1 and are similarities,
-not confidence percentages. Weakly related files can appear among the best
-available matches. Similar-file search compares the selected file's mean
-document vector against other files and excludes the source.
+not confidence percentages. AI search only shows results scoring 0.650 or
+higher (MIN_SCORE in search.py), so weakly related files are hidden and a query
+with no strong match shows no results. Similar-file search is not filtered. It
+compares the selected file's mean document vector against other files and
+excludes the source.
 
 SQLite stores relative paths, size, nanosecond timestamps, file type, model ID,
 passage locations, and float32 embeddings. Scans reuse unchanged files and
@@ -137,7 +156,7 @@ update modified ones. Deleted entries are removed on the next scan. Search
 excludes changed or missing files immediately, before reindexing.
 
 The database stays **outside the managed root**, normally under
-$XDG_CACHE_HOME/semfs or ~/.cache/semfs. When that is inside the selected root
+$XDG_CACHE_HOME/semfs or ~/.cache/semfs (%LOCALAPPDATA%\semfs on Windows). When that is inside the selected root
 (for example, when managing your home directory), it uses a per-user directory
 under the system temporary directory. That fallback survives app restarts but
 can be cleaned by the OS. Set SEMFS_CACHE_DIR to choose a cache directory

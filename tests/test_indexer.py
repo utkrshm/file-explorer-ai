@@ -4,8 +4,17 @@ import numpy as np
 import pytest
 from test_search import FakeEmbedder
 
-from semfs.database import Database
+from semfs.database import Database, cache_path
 from semfs.indexer import Chunk, chunk_text, extract, index_files
+
+
+def test_windows_cache_location(tmp_path, monkeypatch):
+    root = tmp_path / "managed"
+    root.mkdir()
+    monkeypatch.setattr("semfs.database.sys.platform", "win32")
+    monkeypatch.delenv("SEMFS_CACHE_DIR")
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "local"))
+    assert cache_path(root).parent == tmp_path / "local" / "semfs"
 
 
 def test_persistence_and_reuse(indexed):
